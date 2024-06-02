@@ -1,0 +1,21 @@
+@startuml class_diagram
+
+class PinReader{
+    PinReader(u32_t pin, *channel*)
+    
+}
+
+note bottom of PinReader: Runs in one thread, and publishs\ninformation from Pin as ASCII\ncharacters to a shared channel.
+
+class UARTPublisher{
+    UARTPublisher(*channel)
+}
+
+note bottom of UARTPublisher: Publishes characters from\nthe channel using UART.
+
+class LedSignaler{
+    LedSignaler(u32_t pin, *channel*)
+
+}
+note bottom of LedSignaler: Listens in on a channel, and\noutputs, in the led, Morse\nCode that matches the text
+
