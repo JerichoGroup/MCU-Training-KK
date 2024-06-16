@@ -1,0 +1,8 @@
+@startuml sequence_diagram
+
+Main -> pin_reader_entry: pin reading thread
+Main -> uart_publisher_entry: uart publishing thread
+Main -> led_signaler_entry: led signaling thread
+
+
+@enduml

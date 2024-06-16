@@ -19,3 +19,5 @@ class LedSignaler{
 }
 note bottom of LedSignaler: Listens in on a channel, and\noutputs, in the led, Morse\nCode that matches the text
 
+
+@enduml
