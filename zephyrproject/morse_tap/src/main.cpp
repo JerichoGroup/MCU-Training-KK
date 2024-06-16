@@ -26,6 +26,7 @@ void led_signaler_entry(void*, void*, void*);
  * See the sample documentation for information on how to fix this.
  */
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct device * gpiob = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
 
 uint32_t input_pin = INPUT_PIN;
@@ -37,10 +38,6 @@ k_thread_stack_t uart_publisher_stack[THREAD_STACK_SIZE];
 k_thread_stack_t led_signaler_stack[THREAD_STACK_SIZE];
 
 k_pipe led_pipe, uart_pipe;
-
-
-
-
 
 
 /**
@@ -57,13 +54,13 @@ void pin_reader_entry(void* p1, void* p2, void* p3){
 
 }
 
-
-void uart_publisher_entry(void* p1, void* p2, void* p3){
-	return;
-}
 void led_signaler_entry(void* p1, void* p2, void* p3){
 	return;
 }
+
+// void uart_publisher_entry(void* p1, void* p2, void* p3){
+// 	return;
+// }
 
 
 
@@ -72,18 +69,17 @@ int main(void)
 	k_pipe_init(&led_pipe, NULL, 0);
 	k_pipe_init(&uart_pipe, NULL, 0);
 
-
-	/*TODO: pass arguments: pin-ids and communication channel*/
 	k_thread_create(&pin_reader, pin_reader_stack, THREAD_STACK_SIZE,
-	pin_reader_entry, (void*)(&input_pin), NULL, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
+	pin_reader_entry, (void*)gpiod, (void*)&led_pipe, (void*)&uart_pipe, 1, K_ESSENTIAL, K_NO_WAIT);
 
 	// k_thread_create(&uart_publisher, uart_publisher_stack, THREAD_STACK_SIZE, 
 	// uart_publisher_entry, NULL, NULL, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
 
+	//TODO: ARGS
 	k_thread_create(&led_signaler, led_signaler_stack, THREAD_STACK_SIZE,
 	led_signaler_entry, NULL, NULL, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
 
-	/*TODO: Schedule threads if needed?*/
+	/*TODO: Schedule/ Start threads if needed?*/
 
 	return 0;
 }

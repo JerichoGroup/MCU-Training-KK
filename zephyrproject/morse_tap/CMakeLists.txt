@@ -5,4 +5,5 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(blinky)
 
 set(CMAKE_CXX_STANDARD 20)
-target_sources(app PRIVATE src/main.cpp)
+
+target_sources(app PRIVATE src/main.cpp src/morse.cpp)
