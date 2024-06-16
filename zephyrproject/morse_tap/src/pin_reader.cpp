@@ -4,7 +4,7 @@ PinReader::PinReader(uint32_t pin, const struct device * dev, k_pipe* p1, k_pipe
 	m_pin_number(pin), m_device(dev), m_pipe_1(p1), m_pipe_2(p2){}
 
 
-void PinReader::Start(){
+void PinReader::start(){
     std::bitset<morse::MAX_BITS_WORD> sequence;
     uint low_count;
     uint index;
@@ -34,10 +34,8 @@ void PinReader::Start(){
 
 void PinReader::_transmit_word(const std::array<char, morse::MAX_CHARS_WORD>& word){
 
-
     k_pipe_put (m_pipe_1, word.data(), sizeof(char) * morse::MAX_CHARS_WORD,
     NULL, sizeof(char) * morse::MAX_CHARS_WORD, K_MSEC(20));
 
     //TODO: Transmit to pipe2 as well
-
 }

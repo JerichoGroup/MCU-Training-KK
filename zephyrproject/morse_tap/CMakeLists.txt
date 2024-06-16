@@ -6,4 +6,5 @@ project(blinky)
 
 set(CMAKE_CXX_STANDARD 20)
 
-target_sources(app PRIVATE src/main.cpp src/morse.cpp)
+target_sources(app PRIVATE src/main.cpp src/morse.cpp
+               src/led_signaler.cpp src/pin_reader.cpp)

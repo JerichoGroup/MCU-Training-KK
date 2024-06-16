@@ -10,6 +10,8 @@
 #include <zephyr/drivers/gpio.h>
 
 #include "pin_reader.hpp"
+#include "led_signaler.hpp"
+
 
 void pin_reader_entry(void*, void*, void*);
 void uart_publisher_entry(void*, void*, void*);
@@ -17,6 +19,8 @@ void led_signaler_entry(void*, void*, void*);
 
 #define THREAD_STACK_SIZE 8192
 #define INPUT_PIN 11
+#define LED_PIN 12
+
 
 /* The devicetree node identifier for the "led0" alias. */
 #define LED0_NODE DT_ALIAS(led0)
@@ -29,7 +33,7 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct device * gpiob = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
 
-uint32_t input_pin = INPUT_PIN;
+
 
 k_thread pin_reader, uart_publisher, led_signaler;
 
@@ -50,19 +54,18 @@ k_pipe led_pipe, uart_pipe;
 void pin_reader_entry(void* p1, void* p2, void* p3){
 
 	PinReader reader(INPUT_PIN, (const struct device *)p1, (k_pipe*)p2, (k_pipe*)p3);
-	reader.Start();
+	reader.start();
 
 }
 
 void led_signaler_entry(void* p1, void* p2, void* p3){
-	return;
+	LedSignaler signaler(LED_PIN, (const struct device *)p1, (k_pipe*)p2);
+	signaler.start();
 }
 
-// void uart_publisher_entry(void* p1, void* p2, void* p3){
+// TODO: void uart_publisher_entry(void* p1, void* p2, void* p3){
 // 	return;
 // }
-
-
 
 int main(void)
 {
@@ -72,12 +75,11 @@ int main(void)
 	k_thread_create(&pin_reader, pin_reader_stack, THREAD_STACK_SIZE,
 	pin_reader_entry, (void*)gpiod, (void*)&led_pipe, (void*)&uart_pipe, 1, K_ESSENTIAL, K_NO_WAIT);
 
-	// k_thread_create(&uart_publisher, uart_publisher_stack, THREAD_STACK_SIZE, 
-	// uart_publisher_entry, NULL, NULL, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
+	// TODO: k_thread_create(&uart_publisher, uart_publisher_stack, THREAD_STACK_SIZE, 
+	// uart_publisher_entry, ???, (void*)&uart_pipe, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
 
-	//TODO: ARGS
 	k_thread_create(&led_signaler, led_signaler_stack, THREAD_STACK_SIZE,
-	led_signaler_entry, NULL, NULL, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
+	led_signaler_entry, (void*)gpiod, (void*)&led_pipe, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
 
 	/*TODO: Schedule/ Start threads if needed?*/
 

@@ -21,7 +21,7 @@ public:
 	~PinReader() = default;
 
     // Starts listening to input pin and publishing to pipes.
-	void Start();
+	void start();
 
 private:
     void _transmit_word(const std::array<char, morse::MAX_CHARS_WORD>& word);
