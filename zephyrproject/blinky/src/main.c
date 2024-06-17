@@ -9,45 +9,27 @@
 #include <zephyr/drivers/gpio.h>
 
 /* 1000 msec = 1 sec */
-#define SLEEP_TIME_MS   500
 
 /* The devicetree node identifier for the "led1" alias. */
-#define LED0_NODE DT_ALIAS(led0)
 
 /*
  * A build error on this line means your board is unsuppo rted.
  * See the sample documentation for information on how to fix this.
  */
 
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
 
 
 
 int main(void)
 {
-	
-	
-	int ret;
-	bool led_state = true;
+	gpio_pin_configure(gpiod,13,GPIO_OUTPUT_ACTIVE);
+	gpio_pin_configure(gpiod,14,GPIO_OUTPUT_ACTIVE);
 
-	if (!gpio_is_ready_dt(&led)) {
-		return 0;
-	}
+	gpio_pin_set(gpiod, 13, 1);
+	gpio_pin_set(gpiod, 14, 1);
+	while(1){}
 
-	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
-	if (ret < 0) {
-		return 0;
-	}
 
-	while (1) {
-		ret = gpio_pin_toggle_dt(&led);
-		if (ret < 0) {
-			return 0;
-		}
-
-		led_state = !led_state;
-		printf("LED state: %s\n", led_state ? "ON" : "OFF");
-		k_msleep(SLEEP_TIME_MS);
-	}
 	return 0;
 }

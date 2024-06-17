@@ -5,6 +5,8 @@ m_pin_number(pin), m_device(dev), m_pipe(p1){}
 
 void LedSignaler::start(){
     std::array<char, morse::MAX_CHARS_WORD> received_word;
+    k_msleep(morse::TIME_UNIT / 2);
+	gpio_pin_configure(m_device,m_pin_number,GPIO_OUTPUT_ACTIVE);
     while(1){
         k_pipe_get(m_pipe, received_word.data(), morse::MAX_CHARS_WORD,
         NULL, morse::MAX_CHARS_WORD, K_FOREVER);

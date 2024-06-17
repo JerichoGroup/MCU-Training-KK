@@ -1,7 +1,6 @@
 #ifndef __PIN_READER_HPP__
 #define __PIN_READER_HPP__
 
-#include <exception>
 #include <string>
 #include <bitset>
 #include <array>
