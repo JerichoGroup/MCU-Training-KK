@@ -11,7 +11,7 @@ void LedSignaler::callback(){
         gpio_pin_set(m_device, m_pin_number, 0);
         --m_remaining_zeroes;
     }
-    else {
+    if (0 == m_remaining_zeroes) {
         if(m_remaining > 0){
             if (m_current_word[m_index++]){
                 --m_remaining;
@@ -22,7 +22,7 @@ void LedSignaler::callback(){
             if(0 == m_remaining){
                 m_remaining_zeroes = morse::END_WORD;
             }
-        }   else if(0 == m_remaining)   {
+        }   else if (0 == m_remaining) {
             std::array<char, morse::MAX_CHARS_WORD> received_word = { 0 };
             k_msgq_get(m_msgq, received_word.data(), K_NO_WAIT);
             m_current_word = morse::english_to_morse(received_word);
