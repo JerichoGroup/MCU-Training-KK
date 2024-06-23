@@ -5,4 +5,6 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(morse_tap)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
-target_sources(app PRIVATE src/main.cpp src/morse.cpp src/led_signaler.cpp src/pin_reader.cpp)
+target_sources(app PRIVATE src/main.cpp src/morse.cpp
+               src/led_signaler.cpp src/pin_reader.cpp
+               src/uart_publisher.cpp)

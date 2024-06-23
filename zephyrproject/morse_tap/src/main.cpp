@@ -10,81 +10,78 @@
 
 #include "pin_reader.hpp"
 #include "led_signaler.hpp"
+#include "uart_publisher.hpp"
 
 
-void pin_reader_entry(void*, void*, void*);
-void uart_publisher_entry(void*, void*, void*);
-void led_signaler_entry(void*, void*, void*);
+void pin_reader_entry(k_timer* timer);
+void led_signaler_entry(k_timer* timer);
+// void uart_publisher_entry(k_timer* timer);
 
 #define THREAD_STACK_SIZE 8192
 #define INPUT_PIN 11
 #define LED_PIN 13
+#define MSGQ_BUFFER_SIZE 8
 
 static const struct device * gpiob = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
+static const struct device * UART_0 = NULL;//DEVICE_DT_GET(DT_NODELABEL(UART_0));
 
+k_timer pin_read_timer, led_signal_timer, uart_publish_timer;
 
+char uart_msgq_buffer[MSGQ_BUFFER_SIZE * morse::MAX_CHARS_WORD * sizeof(char)];
+char led_msgq_buffer[MSGQ_BUFFER_SIZE * morse::MAX_CHARS_WORD * sizeof(char)];
+k_msgq led_msgq, uart_msgq;
 
-k_thread pin_reader, uart_publisher, led_signaler;
-
-k_thread_stack_t pin_reader_stack[THREAD_STACK_SIZE];
-k_thread_stack_t uart_publisher_stack[THREAD_STACK_SIZE];
-k_thread_stack_t led_signaler_stack[THREAD_STACK_SIZE];
-
-k_pipe led_pipe, uart_pipe;
-
+PinReader reader(INPUT_PIN, gpiob, &led_msgq, &uart_msgq);
+LedSignaler signaler(LED_PIN, gpiod, &led_msgq);
+UartPublisher publisher(UART_0, &uart_msgq);
 
 /**
- * @brief Reads morse input from a pin and publishes the info.
+ * @brief Reads and records a bit from the input pin.
+ * If the bit completes a word then it starts transmitting it.
  * 
- * @param p1 Adress of device on which the pin is sampled.
- * @param p2 Adress of first pipe to publish to.
- * @param p3 Adress of second pipe to publish to.
+ * @param timer The timer for the pin reads.
  */
-void pin_reader_entry(void* p1, void* p2, void* p3){
-	PinReader reader(INPUT_PIN, (const struct device *)p1, (k_pipe*)p2, (k_pipe*)p3);
-	reader.start();
+void pin_reader_callback(k_timer* timer){
+	reader.callback();
 }
 
-void led_signaler_entry(void* p1, void* p2, void* p3){
-	LedSignaler signaler(LED_PIN, (const struct device *)p1, (k_pipe*)p2);
-	signaler.start();
+/**
+ * @brief toggles a bit using the led if a word is being signaled.
+ * Then checks if a new word has been transmitted by the reader.
+ * 
+ * @param timer The timer for the led signals.
+ */
+void led_signaler_callback(k_timer* timer){
+	signaler.callback();
+}
+/**
+ * @brief Checks for words transmitted by the reader and published them.
+ *
+ * @param timer The timer for the uart transmittions.
+ */
+void uart_publisher_callback(k_timer* timer){
+	publisher.callback();
 }
 
-// TODO: void uart_publisher_entry(void* p1, void* p2, void* p3){
-// 	return;
-// }
 
 int main(void)
 {
-	k_tid_t pin_reader_id;
-	k_tid_t led_signaler_id;
-	k_pipe_init(&led_pipe, NULL, 0);
-	k_pipe_init(&uart_pipe, NULL, 0);
+	gpio_pin_configure(gpiod, LED_PIN, GPIO_OUTPUT);
+	gpio_pin_configure(gpiob, INPUT_PIN, GPIO_INPUT);
 
-	pin_reader_id = k_thread_create(&pin_reader, pin_reader_stack, THREAD_STACK_SIZE,
-	pin_reader_entry, (void*)gpiob, (void*)&led_pipe, (void*)&uart_pipe, 0, K_ESSENTIAL, K_NO_WAIT);
+	k_timer_init(&pin_read_timer, pin_reader_callback, NULL);
+	k_timer_init(&led_signal_timer, led_signaler_callback, NULL);
+	k_timer_init(&uart_publish_timer, uart_publisher_callback, NULL);
 
-	// TODO: k_thread_create(&uart_publisher, uart_publisher_stack, THREAD_STACK_SIZE, 
-	// uart_publisher_entry, ???, (void*)&uart_pipe, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
+	k_msgq_init(&led_msgq, led_msgq_buffer, sizeof(char) * morse::MAX_CHARS_WORD, MSGQ_BUFFER_SIZE);
+	k_msgq_init(&uart_msgq, uart_msgq_buffer, sizeof(char) * morse::MAX_CHARS_WORD, MSGQ_BUFFER_SIZE);
 
-	// led_signaler_id = k_thread_create(&led_signaler, led_signaler_stack, THREAD_STACK_SIZE,
-	// led_signaler_entry, (void*)gpiod, (void*)&led_pipe, NULL, 1, K_ESSENTIAL, K_NO_WAIT);
-
-
-	// std::bitset<22> sig;
-	// sig[1] = true;
-	// sig[3] = true;
-	// sig[5] = true;
-	// sig[7] = true;
-	// sig[11] = true;
-	// sig[13] = true;
-	// for (size_t i = 0 ; i < 21 ; ++i){
-	// 	gpio_pin_configure(gpiod,LED_PIN,GPIO_OUTPUT_ACTIVE);
-	// 	gpio_pin_set(gpiod,LED_PIN,sig[i]);
-    //     k_msleep(morse::TIME_UNIT);
-	// }
-	k_thread_join(&pin_reader, K_FOREVER);
-	k_thread_join(&led_signaler, K_FOREVER);
+	k_timer_start(&pin_read_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));
+	k_timer_start(&led_signal_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));
+	k_timer_start(&uart_publish_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));	
+	
+	while(1){}
+	
 	return 0;
 }
