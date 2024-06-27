@@ -17,10 +17,7 @@ void UartPublisher::callback(){
     std::array<char, morse::MAX_CHARS_WORD> received_word = { 0 };
     k_msgq_get(m_msgq, received_word.data(), K_NO_WAIT);
     size_t length = std::strlen(received_word.data());
-
-    // if (length){
-    //     uart_tx(m_dev, (uint8_t*)received_word.data(), length, SYS_FOREVER_US);
-    // }
+    
     for (size_t i = 0; i < length; i++) {
 		uart_poll_out(m_dev, received_word.data()[i]);
 	}

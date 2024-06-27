@@ -27,6 +27,9 @@ static const struct device * gpiob = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
 static const struct device * usart1 = DEVICE_DT_GET(DT_NODELABEL(usart1));
 
+static char rx_buf[morse::MAX_CHARS_WORD];
+static int rx_buf_pos = 0;
+
 k_timer pin_read_timer, led_signal_timer, uart_publish_timer;
 
 char uart_msgq_buffer[MSGQ_BUFFER_SIZE * morse::MAX_CHARS_WORD * sizeof(char)];
@@ -36,6 +39,27 @@ k_msgq led_msgq, uart_msgq;
 PinReader reader(INPUT_PIN, gpiob, &led_msgq, &uart_msgq);
 LedSignaler signaler(LED_PIN, gpiod, &led_msgq);
 UartPublisher publisher(usart1, &uart_msgq);
+
+
+
+void irq_rx_uart(const struct device *dev, void *user_data)
+{
+	uint8_t c;
+	if (!uart_irq_update(usart1) || !uart_irq_rx_ready(usart1)) {
+		return;
+	}
+	while (uart_fifo_read(usart1, &c, 1) == 1) {
+		if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
+			rx_buf[rx_buf_pos] = '\0';
+
+			k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
+			k_msgq_put(&led_msgq, &rx_buf, K_NO_WAIT);
+			rx_buf_pos = 0;
+		} else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
+			rx_buf[rx_buf_pos++] = c;
+		}
+	}
+}
 
 /**
  * @brief Reads and records a bit from the input pin.
@@ -82,7 +106,11 @@ int main(void)
 	k_timer_start(&led_signal_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));
 	k_timer_start(&uart_publish_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));	
 	
+	uart_irq_callback_user_data_set(usart1, irq_rx_uart, NULL);
+	uart_irq_rx_enable(usart1);
+
 	while(1){}
 	
 	return 0;
 }
+

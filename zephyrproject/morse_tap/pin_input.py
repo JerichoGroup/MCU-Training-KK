@@ -41,7 +41,7 @@ letter_to_morse = {
 
 
 def main():
-    words = input("What wish you to send? ").split(' ')
+    words = input("What do you wish to send? ").split(' ')
     port = '/dev/ttyUSB0'
     message = ""
 
@@ -66,3 +66,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
