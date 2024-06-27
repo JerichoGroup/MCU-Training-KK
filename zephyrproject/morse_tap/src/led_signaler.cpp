@@ -30,7 +30,5 @@ void LedSignaler::callback(){
             m_remaining = m_current_word.count();
         }
     }
-
-
 }
 

@@ -7,6 +7,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/uart.h>
 
 #include "pin_reader.hpp"
 #include "led_signaler.hpp"
@@ -24,7 +25,7 @@ void led_signaler_entry(k_timer* timer);
 
 static const struct device * gpiob = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
-static const struct device * UART_0 = NULL;//DEVICE_DT_GET(DT_NODELABEL(UART_0));
+static const struct device * usart1 = DEVICE_DT_GET(DT_NODELABEL(usart1));
 
 k_timer pin_read_timer, led_signal_timer, uart_publish_timer;
 
@@ -34,7 +35,7 @@ k_msgq led_msgq, uart_msgq;
 
 PinReader reader(INPUT_PIN, gpiob, &led_msgq, &uart_msgq);
 LedSignaler signaler(LED_PIN, gpiod, &led_msgq);
-UartPublisher publisher(UART_0, &uart_msgq);
+UartPublisher publisher(usart1, &uart_msgq);
 
 /**
  * @brief Reads and records a bit from the input pin.
@@ -55,6 +56,7 @@ void pin_reader_callback(k_timer* timer){
 void led_signaler_callback(k_timer* timer){
 	signaler.callback();
 }
+
 /**
  * @brief Checks for words transmitted by the reader and published them.
  *
@@ -63,7 +65,6 @@ void led_signaler_callback(k_timer* timer){
 void uart_publisher_callback(k_timer* timer){
 	publisher.callback();
 }
-
 
 int main(void)
 {
