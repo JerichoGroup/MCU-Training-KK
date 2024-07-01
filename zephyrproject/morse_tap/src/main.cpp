@@ -27,6 +27,7 @@ static const struct device * gpiob = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 static const struct device * gpiod = DEVICE_DT_GET(DT_NODELABEL(gpiod));
 static const struct device * usart1 = DEVICE_DT_GET(DT_NODELABEL(usart1));
 
+
 static char rx_buf[morse::MAX_CHARS_WORD];
 static int rx_buf_pos = 0;
 
@@ -42,14 +43,17 @@ UartPublisher publisher(usart1, &uart_msgq);
 
 
 
+
+
+
 void irq_rx_uart(const struct device *dev, void *user_data)
 {
 	uint8_t c;
-	if (!uart_irq_update(usart1) || !uart_irq_rx_ready(usart1)) {
+	if (!uart_irq_update(dev) || !uart_irq_rx_ready(dev)) {
 		return;
 	}
-	while (uart_fifo_read(usart1, &c, 1) == 1) {
-		if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
+	while (uart_fifo_read(dev, &c, 1) == 1) {
+		if ((c == '\n') && rx_buf_pos > 0) {
 			rx_buf[rx_buf_pos] = '\0';
 
 			k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
@@ -90,10 +94,27 @@ void uart_publisher_callback(k_timer* timer){
 	publisher.callback();
 }
 
-int main(void)
-{
+/**
+ * Configures the uart device, and the input, and output morse pins.
+ */
+void configure_devices(){
 	gpio_pin_configure(gpiod, LED_PIN, GPIO_OUTPUT);
 	gpio_pin_configure(gpiob, INPUT_PIN, GPIO_INPUT);
+
+	struct uart_config uart_cfg = {
+        .baudrate = 9600,
+        .parity   = UART_CFG_PARITY_NONE,
+        .stop_bits = UART_CFG_STOP_BITS_1,
+        .data_bits = UART_CFG_DATA_BITS_8,
+        .flow_ctrl = UART_CFG_FLOW_CTRL_NONE
+    };
+    uart_configure(usart1, &uart_cfg); 
+}
+
+
+int main(void)
+{
+	configure_devices();
 
 	k_timer_init(&pin_read_timer, pin_reader_callback, NULL);
 	k_timer_init(&led_signal_timer, led_signaler_callback, NULL);
@@ -108,7 +129,6 @@ int main(void)
 	
 	uart_irq_callback_user_data_set(usart1, irq_rx_uart, NULL);
 	uart_irq_rx_enable(usart1);
-
 	while(1){}
 	
 	return 0;
