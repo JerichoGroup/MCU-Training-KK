@@ -31,7 +31,7 @@ static const struct device * usart1 = DEVICE_DT_GET(DT_NODELABEL(usart1));
 static char rx_buf[morse::MAX_CHARS_WORD];
 static int rx_buf_pos = 0;
 
-k_timer pin_read_timer, led_signal_timer, uart_publish_timer;
+k_timer pin_read_timer, led_signal_timer, uart_publish_timer, injection_check_timer;
 
 char uart_msgq_buffer[MSGQ_BUFFER_SIZE * morse::MAX_CHARS_WORD * sizeof(char)];
 char led_msgq_buffer[MSGQ_BUFFER_SIZE * morse::MAX_CHARS_WORD * sizeof(char)];
@@ -41,24 +41,19 @@ PinReader reader(INPUT_PIN, gpiob, &led_msgq, &uart_msgq);
 LedSignaler signaler(LED_PIN, gpiod, &led_msgq);
 UartPublisher publisher(usart1, &uart_msgq);
 
-
-
-
-
-
-void irq_rx_uart(const struct device *dev, void *user_data)
+void irq_rx_uart(k_timer* timer)
 {
 	uint8_t c;
-	if (!uart_irq_update(dev) || !uart_irq_rx_ready(dev)) {
+	if ((!uart_irq_update(usart1)) || !uart_irq_rx_ready(usart1)) {
 		return;
 	}
-	while (uart_fifo_read(dev, &c, 1) == 1) {
+	while (uart_fifo_read(usart1, &c, 1) == 1) {
 		if ((c == '\n') && rx_buf_pos > 0) {
 			rx_buf[rx_buf_pos] = '\0';
+			rx_buf_pos = 0;
 
 			k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
 			k_msgq_put(&led_msgq, &rx_buf, K_NO_WAIT);
-			rx_buf_pos = 0;
 		} else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
 			rx_buf[rx_buf_pos++] = c;
 		}
@@ -111,7 +106,6 @@ void configure_devices(){
     uart_configure(usart1, &uart_cfg); 
 }
 
-
 int main(void)
 {
 	configure_devices();
@@ -119,6 +113,7 @@ int main(void)
 	k_timer_init(&pin_read_timer, pin_reader_callback, NULL);
 	k_timer_init(&led_signal_timer, led_signaler_callback, NULL);
 	k_timer_init(&uart_publish_timer, uart_publisher_callback, NULL);
+	k_timer_init(&injection_check_timer, irq_rx_uart, NULL);
 
 	k_msgq_init(&led_msgq, led_msgq_buffer, sizeof(char) * morse::MAX_CHARS_WORD, MSGQ_BUFFER_SIZE);
 	k_msgq_init(&uart_msgq, uart_msgq_buffer, sizeof(char) * morse::MAX_CHARS_WORD, MSGQ_BUFFER_SIZE);
@@ -126,10 +121,10 @@ int main(void)
 	k_timer_start(&pin_read_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));
 	k_timer_start(&led_signal_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));
 	k_timer_start(&uart_publish_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));	
-	
-	uart_irq_callback_user_data_set(usart1, irq_rx_uart, NULL);
+	k_timer_start(&injection_check_timer, K_MSEC(morse::TIME_UNIT / 2), K_MSEC(morse::TIME_UNIT));
 	uart_irq_rx_enable(usart1);
-	while(1){}
+	while(1){
+	}
 	
 	return 0;
 }
